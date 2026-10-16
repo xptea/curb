@@ -1,0 +1,25 @@
+# Generated applications, downloaded executables, and upstream caches.
+/build/
+/dist/
+/tools/
+/curb
+/curb.exe
+/*.AppImage
+/*.AppImage.*
+
+# Local agent state.
+/.codex/
+/.agents/
+
+# Test and profiling output.
+*.test
+*.prof
+coverage.out
+
+# Python and local machine files.
+__pycache__/
+*.py[cod]
+.DS_Store
+.env
+.env.*
+!.env.example

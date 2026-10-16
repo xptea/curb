@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.gz binary
+*.xz binary
+*.zip binary
+*.mp4 binary
+*.AppImage binary

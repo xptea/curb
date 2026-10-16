@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Curb
+Comment=Save videos and audio locally
+Exec=env GDK_BACKEND=wayland,x11 curb
+Icon=curb
+StartupWMClass=dev.curb.app
+Terminal=false
+Categories=AudioVideo;Utility;
