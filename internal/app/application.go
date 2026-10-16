@@ -10,6 +10,7 @@ import (
 
 	"curb/internal/download"
 	view "curb/internal/ui"
+	"curb/internal/update"
 )
 
 // application owns native window lifetime and mutates UI state on MyGo's
@@ -23,6 +24,11 @@ type application struct {
 	sitesCancel           context.CancelFunc
 	maximized, fullScreen bool
 	settingsPath          string
+	updateClient          *update.Client
+	availableUpdate       *update.Release
+	updateLoopCancel      context.CancelFunc
+	updateCheckCancel     context.CancelFunc
+	updateInstallCancel   context.CancelFunc
 }
 
 func newApplication(version string) *application {
@@ -36,6 +42,9 @@ func newApplication(version string) *application {
 	}
 	a := &application{State: view.State{Version: version, Destination: destination, Format: "Video", Quality: "Best available", AudioQuality: "Best quality", Status: "Ready when you are", Progress: -1}}
 	a.loadSettings()
+	a.updateClient = update.NewClient(version)
+	a.UpdateError = os.Getenv("CURB_UPDATE_ERROR")
+	os.Unsetenv("CURB_UPDATE_ERROR")
 	if p := os.Getenv("CURB_DOWNLOAD_DIR"); p != "" {
 		a.Destination = p
 	}
@@ -55,6 +64,7 @@ func newApplication(version string) *application {
 		},
 		ShowFile:           mygo.Shell.ShowItemInFolder,
 		LoadSupportedSites: a.loadSupportedSites,
+		CheckUpdates:       func() { a.checkUpdates(true) }, InstallUpdate: a.installUpdate,
 	}
 	return a
 }

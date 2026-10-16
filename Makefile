@@ -31,6 +31,7 @@ check: fmt-check vet test
 	PYTHONPATH=scripts $(PYTHON) -m unittest discover -s scripts/tests
 	sh -n packaging/linux/install.sh
 	sh -n packaging/linux/AppRun packaging/linux/build-ffmpeg.sh
+	sh -n packaging/native/build-ffmpeg.sh
 
 tools:
 	$(PYTHON) scripts/bundle.py --prepare-only

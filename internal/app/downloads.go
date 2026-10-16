@@ -8,7 +8,7 @@ import (
 )
 
 func (a *application) startDownload() {
-	if a.Busy {
+	if a.Busy || a.Updating {
 		return
 	}
 	link, err := download.ValidateURL(a.URL)
@@ -54,7 +54,7 @@ func (a *application) startDownload() {
 }
 
 func (a *application) canDownload() bool {
-	if a.Busy || a.tools.Downloader == "" || a.tools.FFmpeg == "" {
+	if a.Busy || a.Updating || a.tools.Downloader == "" || a.tools.FFmpeg == "" {
 		return false
 	}
 	_, err := download.ValidateURL(a.URL)

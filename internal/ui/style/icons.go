@@ -6,6 +6,7 @@ import (
 
 var (
 	ArrowIcon    = icon(`<path d="M5 12h14m-5-5 5 5-5 5"/>`)
+	DownloadIcon = icon(`<path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/>`)
 	ChevronIcon  = icon(`<path d="m6 9 6 6 6-6"/>`)
 	CheckIcon    = icon(`<path d="m5 12 4 4L19 6"/>`)
 	SunIcon      = icon(`<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>`)

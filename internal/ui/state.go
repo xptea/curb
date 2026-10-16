@@ -13,6 +13,9 @@ type State struct {
 	SupportedSitesOpen, SitesLoading                bool
 	SupportedSites                                  []string
 	SitesQuery, SitesError                          string
+	UpdateVersion, UpdateError                      string
+	UpdateChecking, Updating                        bool
+	UpdateProgress                                  float64
 }
 
 // Actions connects user interaction to the application controller.
@@ -21,6 +24,7 @@ type Actions struct {
 	Minimize, ToggleMaximize, Close              func()
 	ShowFile                                     func(string)
 	LoadSupportedSites                           func()
+	CheckUpdates, InstallUpdate                  func()
 }
 
 type screen struct {

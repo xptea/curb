@@ -9,6 +9,7 @@ main
   └─ app
       ├─ ui ── components ── style
       ├─ download
+      ├─ update
       ├─ settings
       └─ platform
 ```
@@ -22,6 +23,8 @@ main
 `internal/download` has no MyGo dependency. It discovers tools, validates HTTP(S) URLs, assembles yt-dlp arguments, parses structured output, and runs the download process. Process cancellation is selected by Go's OS-specific filenames/build tags. Linux/macOS cancel the process group; Windows terminates the helper tree so FFmpeg and the JavaScript runtime do not survive a canceled download.
 
 `internal/settings` reads and atomically replaces the per-user JSON preferences file. Only the destination folder is persisted. Malformed or unavailable settings fall back to the app's defaults; errors while saving are shown in the settings screen.
+
+`internal/update` has no MyGo dependency. It checks the GitHub Raw release feed, chooses the current OS/CPU asset, verifies downloads, safely extracts native packages, and manages replacement/relaunch with a startup receipt and rollback. Its detached helper is entered by `main` before initializing a UI. `internal/app/updates.go` owns periodic checks, progress, cancellation, and the quit handoff; the UI only renders the version/update button. See [updates](updates.md) for release publishing.
 
 `internal/platform` contains native window appearance setup. Linux makes the GTK backing transparent once; MyGo and the desktop compositor draw the rounded window. No window region is rebuilt during resize.
 

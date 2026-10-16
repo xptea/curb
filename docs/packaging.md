@@ -26,7 +26,7 @@ Run `make check` and `make test-integration`, then test the actual AppImage from
 
 The standard `--appimage-extract` and `--appimage-extract-and-run` options are available; the latter works without FUSE mounting. `AppRun` prefers Wayland with X11 fallback, sets production mode, and uses the bundled GTK/font resources. Settings and downloads stay outside the read-only image. Shared libraries can be replaced in an extracted AppImage.
 
-Preserve notices and provide corresponding source/build materials for the exact LGPL/GPL components as required by their licenses before publishing a release. Links alone do not replace those obligations. The FFmpeg source digest and full configure log are preserved; the Linux manifest lists exact source-package versions. The app's own code remains MIT. No build script publishes releases automatically.
+Preserve notices and provide corresponding source/build materials for the exact LGPL/GPL components as required by their licenses before publishing a release. Links alone do not replace those obligations. The FFmpeg source digest and full configure log are preserved; the Linux manifest lists exact source-package versions. The app's own code remains MIT. Local AppImage builds do not publish anything; the tag release workflow publishes after all native build jobs pass.
 
 ## Windows and macOS
 
@@ -37,8 +37,8 @@ go run github.com/egoist/mygo/cmd/mygo build -platform darwin/universal -skip-dm
 go run github.com/egoist/mygo/cmd/mygo build -platform windows/amd64
 ```
 
-These commands must use tools prepared for the target platform. The shared `tools/` resource in the current config is prepared by the Linux bundler; replace it with native resources before making macOS/Windows releases. The icon/bundle checks can omit this resource to validate branding without incorrectly shipping Linux executables. macOS disk-image creation and signing require macOS; Windows installer creation requires NSIS.
+These low-level commands must use tools prepared for the target platform. Prefer `scripts/release.py build-native` or the tag release workflow, which prepares the native resources first. The ordinary `make tools` command remains Linux-specific. The icon/bundle checks can omit this resource to validate branding without incorrectly shipping Linux executables. macOS disk-image creation and signing require macOS; Windows installer creation requires NSIS.
 
 MyGo's native event loop and window events are used. Windows tool discovery recognizes `.exe`; macOS resources are found in `Contents/Resources/tools`. macOS retains its Dock app after the window closes and reopens the window on activation; Cmd+Q quits normally. Native download folders are used, and cancellation includes child tools on each desktop platform.
 
-Cross-compilation covers Windows x64 and macOS Intel/Apple Silicon. This does not verify runtime behavior. Those platforms still need their own tool binaries, packaging, signing/notarization as appropriate, and tests on the actual operating systems. Linux tools must not be copied into those releases.
+Cross-compilation covers Windows x64 and macOS Intel/Apple Silicon. This does not verify runtime behavior. The tag release workflow now prepares native tools and packages on dedicated Windows and macOS runners, runs media integration tests, and checks the first rendered app frame. Signing/notarization and real release-to-release native update checks still need validation on those operating systems. Linux tools are not copied into those releases.

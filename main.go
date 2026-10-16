@@ -5,8 +5,10 @@ import (
 	_ "embed"
 	"encoding/json"
 	"log"
+	"os"
 
 	"curb/internal/app"
+	"curb/internal/update"
 )
 
 //go:embed mygo.json
@@ -16,6 +18,12 @@ var appConfig []byte
 var appIcon []byte
 
 func main() {
+	if len(os.Args) == 3 && os.Args[1] == update.HelperFlag {
+		if err := update.RunHelper(os.Args[2]); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	var config struct {
 		Version string `json:"version"`
 	}

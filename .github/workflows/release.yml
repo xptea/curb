@@ -1,0 +1,166 @@
+name: Build release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing stable tag, such as v0.1.1
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag || github.ref_name }}
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.repository == 'xptea/curb' && (github.event_name != 'release' || !github.event.release.prerelease)
+    runs-on: ubuntu-24.04
+    outputs:
+      complete: ${{ steps.state.outputs.complete }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          persist-credentials: false
+      - id: state
+        name: Validate tag and check for an existing complete release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/release.py complete --tag "$RELEASE_TAG"
+
+  build:
+    needs: prepare
+    if: needs.prepare.outputs.complete != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-amd64
+            runner: ubuntu-24.04
+          - platform: windows-amd64
+            runner: windows-2025
+          - platform: darwin-amd64
+            runner: macos-15-intel
+          - platform: darwin-arm64
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-0t64 libepoxy0 fonts-dejavu-core binutils
+      - name: Install macOS build dependencies
+        if: runner.os == 'macOS'
+        run: brew install nasm pkgconf lame gnutls
+      - uses: msys2/setup-msys2@v2.33.0
+        if: runner.os == 'Windows'
+        with:
+          msystem: UCRT64
+          update: true
+          path-type: inherit
+          install: >-
+            base-devel
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-nasm
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-lame
+            mingw-w64-ucrt-x86_64-gnutls
+            mingw-w64-ucrt-x86_64-zlib
+            mingw-w64-ucrt-x86_64-python
+      - name: Set the build version from the release tag
+        if: runner.os != 'Windows'
+        run: python3 scripts/release.py prepare --tag "$RELEASE_TAG"
+      - name: Check and build the Linux AppImage
+        if: runner.os == 'Linux'
+        run: |
+          make check
+          make appimage
+          make test-integration
+      - name: Check and build the macOS app bundle
+        if: runner.os == 'macOS'
+        env:
+          CURB_PLATFORM: ${{ matrix.platform }}
+        run: |
+          go test -buildvcs=false -race ./...
+          PYTHONPATH=scripts python3 -m unittest discover -s scripts/tests
+          python3 scripts/release.py build-native --platform "$CURB_PLATFORM"
+      - name: Check and build the Windows portable app
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          python scripts/release.py prepare --tag "$RELEASE_TAG"
+          go test -buildvcs=false -race ./...
+          PYTHONPATH=scripts python -m unittest discover -s scripts/tests
+          python scripts/release.py build-native --platform windows-amd64
+      - uses: actions/upload-artifact@v7
+        with:
+          name: curb-${{ matrix.platform }}
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+          path: |
+            dist/*.AppImage
+            dist/*.zip
+            dist/*.tar.gz
+            dist/*.sha256
+
+  publish:
+    needs: [prepare, build]
+    if: always() && needs.prepare.result == 'success' && (needs.build.result == 'success' || needs.prepare.outputs.complete == 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/download-artifact@v8
+        if: needs.prepare.outputs.complete != 'true'
+        with:
+          pattern: curb-*
+          merge-multiple: true
+          path: release-assets
+      - name: Publish complete release and generate the update feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALREADY_COMPLETE: ${{ needs.prepare.outputs.complete }}
+        run: |
+          if [ "$ALREADY_COMPLETE" = "true" ]; then
+            python3 scripts/release.py publish --tag "$RELEASE_TAG"
+          else
+            python3 scripts/release.py publish --tag "$RELEASE_TAG" --assets release-assets
+          fi
+      - name: Commit the release version and update feed
+        run: |
+          if git diff --quiet -- version.json mygo.json; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.json mygo.json
+          git commit -m "Update desktop release metadata"
+          git push origin HEAD:main

@@ -12,6 +12,7 @@ Curb uses [MyGo](https://mygo.egoist.dev/) for its Go UI and [yt-dlp](https://gi
 - Searchable supported-site list from the installed yt-dlp, available offline.
 - Download progress, cancellation, and a shortcut to show the saved file.
 - A Linux AppImage with GTK and download tools included.
+- Update checks with a green download button when a newer desktop release is available.
 
 Linux is the packaged and manually tested platform. macOS and Windows are checked for compilation; their release packaging and runtime behavior are not yet validated.
 
@@ -73,10 +74,12 @@ scripts/
   bundler/               Verified tools, small FFmpeg build, AppImage assembly
 resources/               App icon
 licenses/                Preserved dependency license texts
-.github/                 Basic CI and issue/PR templates
+.github/                 PR checks, native tag releases, and issue/PR templates
 ```
 
 See [architecture](docs/architecture.md), [development](docs/development.md), and [packaging](docs/packaging.md) for implementation details. Contributions are welcome; start with [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Push a stable tag such as `v0.1.1` to build Linux, Windows, and Intel/Apple Silicon Mac releases. Ordinary branch pushes do not run CI. See [desktop updates](docs/updates.md) for the native build jobs, GitHub Raw version feed, restart/rollback behavior, and publishing workflow.
 
 ## Supported sites and responsible use
 

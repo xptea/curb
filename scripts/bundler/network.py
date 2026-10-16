@@ -3,12 +3,17 @@ import hashlib
 import json
 import shutil
 import urllib.request
+import os
+from urllib.parse import urlparse
 
 from .paths import CACHE, HEADERS
 
 
 def fetch(url):
-    with urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=60) as response:
+    headers = dict(HEADERS)
+    if urlparse(url).hostname == "api.github.com" and os.environ.get("GH_TOKEN"):
+        headers["Authorization"] = "Bearer " + os.environ["GH_TOKEN"]
+    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60) as response:
         return response.read()
 
 

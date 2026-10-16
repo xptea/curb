@@ -9,6 +9,7 @@ import (
 
 	"curb/internal/download"
 	"curb/internal/platform"
+	"curb/internal/update"
 )
 
 func Run(version string, icon []byte) error {
@@ -31,6 +32,11 @@ func Run(version string, icon []byte) error {
 			Transparent: true, Content: ui.View(app.view),
 		})
 		platform.ConfigureWindow(app.win)
+		app.win.OnReadyToShow(func() {
+			if err := update.Acknowledge(version); err != nil {
+				log.Printf("Update startup receipt: %v", err)
+			}
+		})
 		if runtime.GOOS != "darwin" {
 			if err := app.win.SetIcon(icon); err != nil {
 				log.Printf("Window icon: %v", err)
@@ -43,6 +49,7 @@ func Run(version string, icon []byte) error {
 		app.win.OnEnterFullScreen(func() { app.fullScreen = true; app.syncWindowState() })
 		app.win.OnLeaveFullScreen(func() { app.fullScreen = false; app.syncWindowState() })
 		app.win.OnClosed(func() {
+			app.stopUpdateChecks()
 			if app.sitesCancel != nil {
 				app.sitesCancel()
 			}
@@ -61,6 +68,7 @@ func Run(version string, icon []byte) error {
 				}
 			})
 		}()
+		app.beginUpdateChecks()
 	}
 	mygo.App.WhenReady(func() {
 		if runtime.GOOS == "darwin" {

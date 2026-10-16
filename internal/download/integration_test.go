@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -19,7 +20,11 @@ func integrationTools(t *testing.T) Tools {
 		t.Skip("set CURB_INTEGRATION=1 for local HTTP and real yt-dlp tests")
 	}
 	if root := os.Getenv("CURB_INTEGRATION_TOOLS"); root != "" {
-		tools := Tools{Downloader: filepath.Join(root, "yt-dlp"), FFmpeg: filepath.Join(root, "ffmpeg"), JavaScript: filepath.Join(root, "qjs"), JSKind: "quickjs"}
+		suffix := ""
+		if runtime.GOOS == "windows" {
+			suffix = ".exe"
+		}
+		tools := Tools{Downloader: filepath.Join(root, "yt-dlp"+suffix), FFmpeg: filepath.Join(root, "ffmpeg"+suffix), JavaScript: filepath.Join(root, "qjs"+suffix), JSKind: "quickjs"}
 		for _, path := range []string{tools.Downloader, tools.FFmpeg, tools.JavaScript} {
 			if _, err := os.Stat(path); err != nil {
 				t.Fatal(err)
@@ -100,7 +105,7 @@ func TestRealStreamMerge(t *testing.T) {
 			t.Fatalf("stream merge: %v %s", err, output)
 		}
 	}
-	probe := filepath.Join(filepath.Dir(tools.FFmpeg), "ffprobe")
+	probe := filepath.Join(filepath.Dir(tools.FFmpeg), "ffprobe"+filepath.Ext(tools.FFmpeg))
 	output, err := exec.Command(probe, "-v", "error", "-show_entries", "stream=codec_name", "-of", "csv=p=0", merged).CombinedOutput()
 	if err != nil || !strings.Contains(string(output), "h264") || !strings.Contains(string(output), "aac") {
 		t.Fatalf("merge must retain both original codecs: %v %s", err, output)
