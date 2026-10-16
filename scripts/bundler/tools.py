@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import zipfile
 
-from .network import asset, checksum, download, fetch, release
+from .network import asset, asset_checksum, download, fetch, release
 from .binaries import strip_shared_libraries
 from .paths import CACHE, MYGO_VERSION, TOOLS, TOOL_VERSIONS
 
@@ -13,8 +13,7 @@ from .paths import CACHE, MYGO_VERSION, TOOLS, TOOL_VERSIONS
 def _prepare_ytdlp():
     info = release("yt-dlp/yt-dlp", TOOL_VERSIONS["yt-dlp"])
     name = "yt-dlp_linux.zip" if platform.machine() == "x86_64" else "yt-dlp_linux_aarch64.zip"
-    sums_url = asset(info, "SHA2-256SUMS")["browser_download_url"]
-    digest = checksum(fetch(sums_url).decode(), name)
+    digest = asset_checksum(info, name)
     binary = download(asset(info, name)["browser_download_url"], name, digest)
     runtime = TOOLS / "yt-dlp-runtime"
     if runtime.exists():
@@ -41,7 +40,8 @@ def _prepare_ytdlp():
 
 
 def _prepare_ffmpeg(notices):
-    from .lean_ffmpeg import prepare
+    from .lean_ffmpeg import prepare, RUNTIME
+    from .linux_runtime import collect_tool_libraries
     source = prepare()
     for notice in notices.glob("ffmpeg-*"):
         notice.unlink()
@@ -50,6 +50,10 @@ def _prepare_ffmpeg(notices):
             shutil.rmtree(TOOLS / directory)
         shutil.copytree(source / directory, TOOLS / directory, symlinks=True,
                         ignore=shutil.ignore_patterns("pkgconfig", "*.a"))
+    # The standalone tool checks and development app also need LAME/GnuTLS
+    # and their dependencies, before AppRun sets the AppImage runtime paths.
+    libraries = collect_tool_libraries(TOOLS, RUNTIME)
+    shutil.copytree(RUNTIME / "licenses", notices / "linux-runtime", dirs_exist_ok=True)
     for executable in ("ffmpeg", "ffprobe"):
         launcher = TOOLS / executable
         launcher.unlink(missing_ok=True)
@@ -67,6 +71,7 @@ def _prepare_ffmpeg(notices):
         "source": f"https://ffmpeg.org/releases/ffmpeg-{TOOL_VERSIONS['ffmpeg']}.tar.xz",
         "configuration": "packaging/linux/build-ffmpeg.sh",
         "layout": "lean-shared",
+        "libraries": libraries,
     }
 
 

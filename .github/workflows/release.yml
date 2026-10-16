@@ -56,9 +56,14 @@ jobs:
             runner: macos-15
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
+    permissions:
+      contents: read
+      actions: read
     env:
       GH_TOKEN: ${{ github.token }}
       HOMEBREW_NO_AUTO_UPDATE: '1'
+      CURB_PLATFORM: ${{ matrix.platform }}
+      CURB_PYTHON: ${{ matrix.platform == 'windows-amd64' && 'python' || 'python3' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -67,13 +72,17 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+      - name: Restore prepared media tools from an earlier release
+        id: toolchain
+        shell: bash
+        run: '"$CURB_PYTHON" scripts/toolchain_cache.py restore --platform "$CURB_PLATFORM"'
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-0t64 libepoxy0 fonts-dejavu-core binutils
       - name: Install macOS build dependencies
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && steps.toolchain.outputs.hit != 'true'
         run: brew install nasm pkgconf lame gnutls
       - uses: msys2/setup-msys2@v2.33.0
         if: runner.os == 'Windows'
@@ -93,11 +102,34 @@ jobs:
       - name: Set the build version from the release tag
         if: runner.os != 'Windows'
         run: python3 scripts/release.py prepare --tag "$RELEASE_TAG"
+      - name: Prepare Linux media tools on a cache miss
+        if: runner.os == 'Linux' && steps.toolchain.outputs.hit != 'true'
+        run: make tools
+      - name: Prepare macOS media tools on a cache miss
+        if: runner.os == 'macOS' && steps.toolchain.outputs.hit != 'true'
+        run: python3 scripts/release.py prepare-tools --platform "$CURB_PLATFORM"
+      - name: Prepare Windows media tools on a cache miss
+        if: runner.os == 'Windows' && steps.toolchain.outputs.hit != 'true'
+        shell: msys2 {0}
+        run: python scripts/release.py prepare-tools --platform windows-amd64
+      - name: Archive prepared media tools for later releases
+        if: steps.toolchain.outputs.hit != 'true'
+        shell: bash
+        run: '"$CURB_PYTHON" scripts/toolchain_cache.py pack --platform "$CURB_PLATFORM"'
+      - name: Save media tools before building the app
+        if: steps.toolchain.outputs.hit != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.toolchain.outputs.key }}
+          path: build/toolchain-cache/toolchain.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
       - name: Check and build the Linux AppImage
         if: runner.os == 'Linux'
         run: |
           make check
-          make appimage
+          make bundle-local
           make test-integration
       - name: Check and build the macOS app bundle
         if: runner.os == 'macOS'
@@ -117,7 +149,7 @@ jobs:
           python scripts/release.py build-native --platform windows-amd64
       - uses: actions/upload-artifact@v7
         with:
-          name: curb-${{ matrix.platform }}
+          name: curb-release-${{ matrix.platform }}
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
@@ -141,7 +173,7 @@ jobs:
       - uses: actions/download-artifact@v8
         if: needs.prepare.outputs.complete != 'true'
         with:
-          pattern: curb-*
+          pattern: curb-release-*
           merge-multiple: true
           path: release-assets
       - name: Publish complete release and generate the update feed

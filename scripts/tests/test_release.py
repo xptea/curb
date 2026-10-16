@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 import release
-from bundler.native_runtime import collect_windows, macos_imports, windows_imports
+from bundler.native_runtime import collect_macos, collect_windows, macos_imports, windows_imports
 
 
 class ReleaseTests(unittest.TestCase):
@@ -71,6 +71,35 @@ class ReleaseTests(unittest.TestCase):
 
 
 class NativeRuntimeTests(unittest.TestCase):
+    def test_macos_universal_headers_are_not_dylib_dependencies(self):
+        output = ("/tmp/yt-dlp (architecture x86_64):\n"
+                  "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1.0.0)\n"
+                  "/tmp/yt-dlp (architecture arm64):\n"
+                  "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1.0.0)\n")
+        self.assertEqual(macos_imports(output), ["/usr/lib/libSystem.B.dylib"])
+
+    def test_macos_keeps_the_universal_pyinstaller_launcher_unchanged(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            tools = root / "tools"
+            (tools / "licenses").mkdir(parents=True)
+            for name in ("ffmpeg", "ffprobe", "qjs", "yt-dlp"):
+                (tools / name).write_bytes(b"native binary fixture")
+
+            def output(*args):
+                if args[:2] == ("brew", "--prefix"): return str(root)
+                if args[:2] == ("brew", "info"): return "{}"
+                path = args[-1]
+                return (f"{path} (architecture x86_64):\n"
+                        "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0)\n"
+                        f"{path} (architecture arm64):\n"
+                        "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0)\n")
+
+            with patch("bundler.native_runtime.command", side_effect=output), \
+                    patch("bundler.native_runtime.subprocess.run") as run:
+                self.assertEqual(collect_macos(root / "prefix", tools), [])
+            self.assertFalse(any(call.args[0][-1] == str(tools / "yt-dlp") for call in run.call_args_list))
+
     def test_import_parsers(self):
         self.assertEqual(windows_imports(" DLL Name: KERNEL32.dll\n DLL Name: avcodec.dll"), ["KERNEL32.dll", "avcodec.dll"])
         self.assertEqual(macos_imports("ffmpeg:\n /usr/lib/libSystem.B.dylib (compatibility version 1.0.0)\n @rpath/libavcodec.dylib (compatibility version 1.0.0)"),

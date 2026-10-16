@@ -178,6 +178,8 @@ def main():
             child.add_argument("--assets", type=Path)
     child = sub.add_parser("build-native")
     child.add_argument("--platform", choices=PLATFORMS[1:], required=True)
+    child = sub.add_parser("prepare-tools")
+    child.add_argument("--platform", choices=PLATFORMS[1:], required=True)
     args = parser.parse_args()
     if args.command == "prepare":
         print(prepare(args.tag))
@@ -189,6 +191,9 @@ def main():
                 file.write(f"complete={result}\n")
     elif args.command == "build-native":
         build_native(args.platform)
+    elif args.command == "prepare-tools":
+        from bundler.native_tools import prepare_native
+        prepare_native(args.platform)
     else:
         publish(args.tag, args.assets)
 

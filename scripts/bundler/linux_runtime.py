@@ -7,6 +7,35 @@ import shutil
 import subprocess
 
 
+SYSTEM_LIBRARIES = {"libc.so.6", "libm.so.6", "libdl.so.2", "librt.so.1",
+                    "libpthread.so.0", "libresolv.so.2", "libgcc_s.so.1", "libstdc++.so.6",
+                    "ld-linux-x86-64.so.2", "ld-linux-aarch64.so.1"}
+
+
+def collect_tool_libraries(tools, runtime):
+    """Make the FFmpeg tools runnable without libraries installed on the host."""
+    libraries = tools / "lib"
+    queue = [tools / "bin/ffmpeg", tools / "bin/ffprobe"]
+    visited = set()
+    copied = []
+    while queue:
+        binary = queue.pop()
+        output = subprocess.check_output(["objdump", "-p", str(binary)], text=True)
+        for name in re.findall(r"^\s*NEEDED\s+(\S+)", output, re.MULTILINE):
+            if name in visited or name in SYSTEM_LIBRARIES:
+                continue
+            visited.add(name)
+            target = libraries / name
+            if not target.is_file():
+                source = runtime / "lib" / name
+                if not source.is_file():
+                    raise RuntimeError(f"Missing bundled FFmpeg library: {name}")
+                shutil.copy2(source, target)
+                copied.append(name)
+            queue.append(target)
+    return sorted(copied)
+
+
 def collect(destination):
     destination = Path(destination)
     if destination.exists():
@@ -32,11 +61,9 @@ def collect(destination):
             raise RuntimeError(output)
         files.update(re.findall(r"=> (/\S+)", output))
     # Use the host's libc and GPU driver stack, never a newer build-host copy.
-    excluded = {"libc.so.6", "libm.so.6", "libdl.so.2", "librt.so.1",
-                "libpthread.so.0", "libresolv.so.2", "libgcc_s.so.1", "libstdc++.so.6"}
     for filename in sorted(files):
         path = Path(filename)
-        if path.name in excluded:
+        if path.name in SYSTEM_LIBRARIES:
             continue
         shutil.copy2(path, libraries / path.name)
         # Resolve /lib -> /usr/lib differences in Debian package ownership.

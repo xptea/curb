@@ -1,4 +1,5 @@
 """Prepare pinned download tools and lean shared FFmpeg on macOS/Windows runners."""
+import hashlib
 import json
 import os
 import platform
@@ -6,15 +7,29 @@ import shutil
 import subprocess
 import tarfile
 
-from .network import asset, checksum, download, fetch, release
+from .network import asset, asset_checksum, download, fetch, release
 from .paths import ROOT, CACHE, TOOLS, TOOL_VERSIONS
 from .native_runtime import collect_macos, collect_windows, command
+
+
+def native_build_id(target):
+    inputs = ("packaging/tools.json", "packaging/native/build-ffmpeg.sh", "scripts/bundler/native_tools.py",
+              "scripts/bundler/native_runtime.py", "scripts/bundler/network.py")
+    return hashlib.sha256(target.encode() + b"".join((ROOT / path).read_bytes() for path in inputs)).hexdigest()
 
 
 def prepare_native(target):
     expected = "windows-amd64" if os.name == "nt" else "darwin-" + ("arm64" if platform.machine() == "arm64" else "amd64")
     if target != expected or not (os.name == "nt" or platform.system() == "Darwin"):
         raise RuntimeError(f"Build {target} on its matching native runner")
+    stamp = TOOLS / "curb-build-id"
+    suffix = ".exe" if target.startswith("windows-") else ""
+    build_id = native_build_id(target)
+    required = [TOOLS / (name + suffix) for name in ("yt-dlp", "qjs", "ffmpeg", "ffprobe")]
+    required.extend((TOOLS / "manifest.json", TOOLS / "licenses/ffmpeg-LICENSE"))
+    if stamp.is_file() and stamp.read_text() == build_id and all(path.is_file() for path in required):
+        print(f"Reusing prepared {target} download tools and FFmpeg.", flush=True)
+        return
     CACHE.mkdir(parents=True, exist_ok=True)
     if TOOLS.exists():
         shutil.rmtree(TOOLS)
@@ -27,7 +42,7 @@ def prepare_native(target):
 
     info = release("yt-dlp/yt-dlp", TOOL_VERSIONS["yt-dlp"])
     name = "yt-dlp.exe" if windows else "yt-dlp_macos"
-    digest = checksum(fetch(asset(info, "SHA2-256SUMS")["browser_download_url"]).decode(), name)
+    digest = asset_checksum(info, name)
     shutil.copy2(download(asset(info, name)["browser_download_url"], name, digest), TOOLS / ("yt-dlp" + suffix))
     metadata["yt-dlp"] = {"version": info["tag_name"], "sha256": digest, "source": info["html_url"]}
 
@@ -76,3 +91,4 @@ def prepare_native(target):
         binary = TOOLS / (name + suffix)
         binary.chmod(0o755)
         subprocess.run([str(binary), argument], cwd=ROOT, check=True)
+    stamp.write_text(build_id)

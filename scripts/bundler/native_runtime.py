@@ -15,7 +15,9 @@ def windows_imports(output):
 
 
 def macos_imports(output):
-    return [line.strip().split(" (", 1)[0] for line in output.splitlines()[1:] if " (" in line]
+    # Universal binaries have a separate unindented header for each CPU.
+    # Those headers contain " (architecture ...)" but are not dependencies.
+    return list(dict.fromkeys(re.findall(r"^\s+(.+?)\s+\(compatibility version ", output, re.MULTILINE)))
 
 
 def collect_windows(prefix, tools):
@@ -59,7 +61,7 @@ def collect_macos(prefix, tools):
             if dependency.startswith(("/usr/lib/", "/System/Library/")):
                 continue
             if binary.name == "yt-dlp":
-                raise RuntimeError("Refusing to rewrite the PyInstaller launcher; it has an unexpected external dependency")
+                raise RuntimeError(f"Refusing to rewrite the PyInstaller launcher; unexpected dependency: {dependency}")
             if dependency.startswith("@loader_path/"):
                 source = origin.parent / dependency.removeprefix("@loader_path/")
             elif dependency.startswith("@rpath/"):
