@@ -6,5 +6,6 @@
 build
 dist
 tools
+website
 **/__pycache__
 **/*.pyc

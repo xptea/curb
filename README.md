@@ -18,6 +18,8 @@ Linux is the packaged and manually tested platform. macOS and Windows are checke
 
 ## Development
 
+The separate React + Tailwind landing page lives in [website/](website/README.md). It builds to static HTML, CSS, and JavaScript for Cloudflare Workers Static Assets. It is independent of the native desktop app and its release builds.
+
 Install Go **1.27.1+**, Python **3.12+** and Docker for AppImage packaging, and GTK 3 with its graphics and font libraries for development on Linux. On Ubuntu 24.04:
 
 ```sh
@@ -37,6 +39,8 @@ make dev
 `make dev` prefers native Wayland on Linux with X11 as a fallback. Use `make dev BACKEND=x11` to test X11 explicitly. MyGo automatically uses hardware GPU rendering when available.
 
 Downloads initially go to the operating system's Downloads folder. Change this in Settings or set `CURB_DOWNLOAD_DIR=/absolute/folder` for a development run. Filenames come from the media title, with the file extension added automatically.
+
+Enable **Automatically copy downloaded files** in Settings to put the finished video or audio file on the system clipboard, ready to paste. This is off by default and remembered between launches. A clipboard error does not affect the saved download.
 
 ## Build and check
 

@@ -35,6 +35,7 @@ func (a *screen) titleBar(c *ui.Context) {
 				a.SettingsOpen = !a.SettingsOpen
 				if a.SettingsOpen {
 					a.SettingsDestination, a.SettingsError = a.Destination, ""
+					a.SettingsAutoCopyDownloads = a.AutoCopyDownloads
 				}
 			})
 			components.IconButton(c, label, symbol).OnClick(a.toggleTheme)

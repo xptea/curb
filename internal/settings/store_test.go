@@ -32,3 +32,14 @@ func TestLoadMalformedPreferences(t *testing.T) {
 		t.Fatal("malformed settings should return an error for the app to handle")
 	}
 }
+
+func TestExistingPreferencesLeaveClipboardUnchanged(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if err := os.WriteFile(path, []byte(`{"destination":"/downloads"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	preferences, err := Load(path)
+	if err != nil || preferences.AutoCopyDownloads || preferences.Destination != "/downloads" {
+		t.Fatalf("legacy preferences changed behavior: %+v, %v", preferences, err)
+	}
+}

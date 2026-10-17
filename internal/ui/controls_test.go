@@ -61,3 +61,29 @@ func TestMediaAndQualityControls(t *testing.T) {
 		t.Fatalf("audio controls did not update shared state: %q, %q", state.Format, state.AudioQuality)
 	}
 }
+
+func TestAutoCopySettingsAreDraftUntilSaved(t *testing.T) {
+	state, render := newTestView()
+	state.AutoCopyDownloads = true
+	tt := ui.NewTester(render, 900, 640)
+	if err := tt.Click("Settings"); err != nil {
+		t.Fatal(err)
+	}
+	if !state.SettingsAutoCopyDownloads {
+		t.Fatal("clipboard switch did not reflect the saved preference")
+	}
+	if err := tt.Click("Auto-copy downloaded files"); err != nil {
+		t.Fatal(err)
+	}
+	if state.SettingsAutoCopyDownloads || !state.AutoCopyDownloads {
+		t.Fatal("editing a draft changed the saved preference")
+	}
+	for _, label := range []string{"Cancel", "Settings"} {
+		if err := tt.Click(label); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !state.SettingsAutoCopyDownloads {
+		t.Fatal("cancel did not discard the draft clipboard preference")
+	}
+}

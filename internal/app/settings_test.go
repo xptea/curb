@@ -23,3 +23,24 @@ func TestSavedDestinationSurvivesRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestAutoCopyPreferenceSurvivesRestart(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("CURB_DOWNLOAD_DIR", "")
+	a := newApplication("test")
+	if a.AutoCopyDownloads {
+		t.Fatal("clipboard copying must be opt-in")
+	}
+	for _, enabled := range []bool{true, false} {
+		a.SettingsDestination = a.Destination
+		a.SettingsAutoCopyDownloads = enabled
+		a.saveSettings()
+		if a.SettingsError != "" {
+			t.Fatal(a.SettingsError)
+		}
+		b := newApplication("test")
+		if b.AutoCopyDownloads != enabled || a.AutoCopyDownloads != enabled {
+			t.Fatal("clipboard preference did not survive restart")
+		}
+	}
+}

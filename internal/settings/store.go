@@ -8,7 +8,8 @@ import (
 
 // Preferences contains the persistent defaults, separate from transient UI state.
 type Preferences struct {
-	Destination string `json:"destination"`
+	Destination       string `json:"destination"`
+	AutoCopyDownloads bool   `json:"auto_copy_downloads"`
 }
 
 // Path returns the per-user settings location without creating it.

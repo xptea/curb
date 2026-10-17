@@ -20,13 +20,20 @@ func (a *screen) feedback(c *ui.Context) {
 		return
 	}
 	if a.SavedPath != "" {
+		label := "Saved to your computer"
+		if a.CopiedToClipboard {
+			label = "Saved and copied to clipboard"
+		}
 		ui.Row(c).Gap(7).Children(func() {
 			ui.Icon(c, style.CheckIcon).Size(15, 15).TextColor(c.Theme().Success)
-			ui.Text(c, "Saved to your computer").FontSize(12).TextColor(c.Theme().Success).Grow(1)
+			ui.Text(c, label).FontSize(12).TextColor(c.Theme().Success).Grow(1)
 			if ui.Button(c, "Show file").Height(26).Padding(3, 8).FontSize(11).Clicked() {
 				a.actions.ShowFile(a.SavedPath)
 			}
 		})
+		if a.ClipboardError != "" {
+			ui.Text(c, "Could not copy to clipboard: "+a.ClipboardError).Label("Clipboard error").FontSize(12).TextColor(c.Theme().TextMuted).MaxHeight(66)
+		}
 		return
 	}
 	if a.Status == "Download canceled" {

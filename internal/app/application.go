@@ -21,6 +21,7 @@ type application struct {
 	actions               view.Actions
 	tools                 download.Tools
 	cancel                context.CancelFunc
+	copyFile              func(string) error
 	sitesCancel           context.CancelFunc
 	maximized, fullScreen bool
 	settingsPath          string
@@ -42,6 +43,7 @@ func newApplication(version string) *application {
 	}
 	a := &application{State: view.State{Version: version, Destination: destination, Format: "Video", Quality: "Best available", AudioQuality: "Best quality", Status: "Ready when you are", Progress: -1}}
 	a.loadSettings()
+	a.copyFile = func(path string) error { return mygo.Clipboard.WriteFiles(path) }
 	a.updateClient = update.NewClient(version)
 	a.UpdateError = os.Getenv("CURB_UPDATE_ERROR")
 	os.Unsetenv("CURB_UPDATE_ERROR")

@@ -8,6 +8,9 @@ type State struct {
 	Busy, Choosing, CanDownload                     bool
 	LightMode, EdgeToEdge, SettingsOpen             bool
 	SettingsDestination, SettingsError              string
+	AutoCopyDownloads, SettingsAutoCopyDownloads    bool
+	CopiedToClipboard                               bool
+	ClipboardError                                  string
 	Status, Detail, Failure, SavedPath              string
 	Progress                                        float64
 	SupportedSitesOpen, SitesLoading                bool

@@ -16,7 +16,11 @@ func (a *application) loadSettings() {
 	}
 	a.settingsPath = path
 	preferences, err := settings.Load(path)
-	if err == nil && filepath.IsAbs(preferences.Destination) {
+	if err != nil {
+		return
+	}
+	a.AutoCopyDownloads = preferences.AutoCopyDownloads
+	if filepath.IsAbs(preferences.Destination) {
 		a.Destination = preferences.Destination
 	}
 }
@@ -31,11 +35,12 @@ func (a *application) saveSettings() {
 		a.SettingsError = "Your settings folder is unavailable."
 		return
 	}
-	if err := settings.Save(a.settingsPath, settings.Preferences{Destination: destination}); err != nil {
+	if err := settings.Save(a.settingsPath, settings.Preferences{Destination: destination, AutoCopyDownloads: a.SettingsAutoCopyDownloads}); err != nil {
 		a.SettingsError = err.Error()
 		return
 	}
 	a.Destination = destination
+	a.AutoCopyDownloads = a.SettingsAutoCopyDownloads
 	a.SettingsOpen = false
 }
 

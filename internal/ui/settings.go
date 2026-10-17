@@ -12,6 +12,13 @@ func (a *screen) settingsView(c *ui.Context) {
 			ui.Button(c, "Choose…").Height(42).FontSize(13).Disabled(a.Choosing).OnClick(a.actions.ChooseFolder)
 		})
 	})
+	ui.Row(c).AlignItems(ui.Center).Gap(16).Children(func() {
+		ui.Column(c).Grow(1).MinWidth(0).Gap(5).Children(func() {
+			ui.Text(c, "Automatically copy downloaded files").FontSize(13).FontWeight(500)
+			ui.Text(c, "Copy the finished file to your clipboard, ready to paste.").FontSize(12).TextColor(c.Theme().TextMuted)
+		})
+		ui.Switch(c, &a.SettingsAutoCopyDownloads).Label("Auto-copy downloaded files").Shrink(0)
+	})
 	if a.SettingsError != "" {
 		ui.Text(c, a.SettingsError).FontSize(12).TextColor(c.Theme().Danger)
 	}

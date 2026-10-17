@@ -26,6 +26,7 @@ func (a *application) startDownload() {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	a.cancel, a.Busy, a.Failure, a.SavedPath = cancel, true, "", ""
+	a.CopiedToClipboard, a.ClipboardError = false, ""
 	a.Status, a.Detail, a.Progress = "Connecting to your link…", "", -1
 	request := download.Request{URL: link, Destination: a.Destination, Format: a.Format, Quality: a.Quality, AudioQuality: a.AudioQuality}
 	win := a.win
@@ -39,18 +40,32 @@ func (a *application) startDownload() {
 		})
 		cancel()
 		win.Update(func() {
-			a.Busy, a.cancel = false, nil
-			if errors.Is(err, context.Canceled) {
-				a.Status = "Download canceled"
-				return
-			}
-			if err != nil {
-				a.Failure = err.Error()
-				return
-			}
-			a.SavedPath, a.Status, a.Progress = path, "Saved", 1
+			a.finishDownload(path, err)
 		})
 	}()
+}
+
+// finishDownload runs on the window's main thread after the final media file
+// exists. Offer a native file reference, never the URL, path text, or file bytes.
+func (a *application) finishDownload(path string, err error) {
+	a.Busy, a.cancel = false, nil
+	a.CopiedToClipboard, a.ClipboardError = false, ""
+	if errors.Is(err, context.Canceled) {
+		a.Status = "Download canceled"
+		return
+	}
+	if err != nil {
+		a.Failure = err.Error()
+		return
+	}
+	a.SavedPath, a.Status, a.Progress = path, "Saved", 1
+	if a.AutoCopyDownloads {
+		if err := a.copyFile(path); err != nil {
+			a.ClipboardError = err.Error()
+		} else {
+			a.CopiedToClipboard = true
+		}
+	}
 }
 
 func (a *application) canDownload() bool {
