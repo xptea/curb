@@ -62,17 +62,24 @@ def prepare(tag):
     return version
 
 
+def native_path(path, platform):
+    value = str(path.resolve())
+    # MSYS2's Python can return forward slashes even on Windows. Go's update
+    # plan deliberately requires filepath.Clean's canonical Windows spelling.
+    return value.replace("/", "\\") if platform.startswith("windows-") else value
+
+
 def smoke_window(executable, target, version, platform):
     # A startup receipt is written by the real application's first drawn frame.
     with tempfile.TemporaryDirectory(prefix=".curb-update-", dir=target.parent) as temporary:
         work = Path(temporary)
         token = secrets.token_hex(24)
-        plan = {"kind": "bundle" if platform.startswith("darwin-") else "directory", "target": str(target.resolve()),
-                "executable": str(executable.relative_to(target)), "platform": platform, "work": str(work.resolve()),
-                "staged": str(work.resolve() / "unused"), "version": version, "token": token, "parent_pid": os.getpid()}
+        plan = {"kind": "bundle" if platform.startswith("darwin-") else "directory", "target": native_path(target, platform),
+                "executable": str(executable.relative_to(target)), "platform": platform, "work": native_path(work, platform),
+                "staged": native_path(work / "unused", platform), "version": version, "token": token, "parent_pid": os.getpid()}
         path = work / "plan.json"
         path.write_text(json.dumps(plan))
-        environment = dict(os.environ, CURB_UPDATE_PLAN=str(path.resolve()), MYGO_GPU="0")
+        environment = dict(os.environ, CURB_UPDATE_PLAN=native_path(path, platform), MYGO_GPU="0")
         log = tempfile.TemporaryFile(mode="w+b")
         process = subprocess.Popen([str(executable.resolve())], cwd=target.parent, env=environment,
                                    stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)

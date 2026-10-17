@@ -2,13 +2,21 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import release
 from bundler.native_runtime import collect_macos, collect_windows, macos_imports, windows_imports
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_smoke_plan_paths_match_go_windows_canonical_paths_under_msys2(self):
+        path = Mock()
+        path.resolve.return_value = "D:/a/curb/curb/build/mygo/.curb-update-check/plan.json"
+        self.assertEqual(release.native_path(path, "windows-amd64"),
+                         "D:\\a\\curb\\curb\\build\\mygo\\.curb-update-check\\plan.json")
+        path.resolve.return_value = "/Users/runner/work/.curb-update-check/plan.json"
+        self.assertEqual(release.native_path(path, "darwin-arm64"), path.resolve.return_value)
+
     def published(self):
         tag = "v0.2.0"
         return {"tag_name": tag, "published_at": "2026-10-16T00:00:00Z", "draft": False, "prerelease": False,
