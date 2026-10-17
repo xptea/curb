@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+from pathlib import Path
 import platform
 import shutil
 import subprocess
@@ -16,6 +17,17 @@ def native_build_id(target):
     inputs = ("packaging/tools.json", "packaging/native/build-ffmpeg.sh", "scripts/bundler/native_tools.py",
               "scripts/bundler/native_runtime.py", "scripts/bundler/network.py")
     return hashlib.sha256(target.encode() + b"".join((ROOT / path).read_bytes() for path in inputs)).hexdigest()
+
+
+def ffmpeg_shell(windows):
+    if not windows:
+        return "/bin/bash"
+    # CreateProcess can find System32/bash.exe (the WSL launcher) before
+    # searching PATH. Resolve MSYS2's actual Bash and launch it by full path.
+    shell = Path(command("cygpath", "-w", "/usr/bin/bash.exe"))
+    if not shell.is_absolute() or not shell.is_file():
+        raise RuntimeError(f"MSYS2 Bash is missing: {shell}; run this build in the MSYS2 UCRT64 shell")
+    return str(shell)
 
 
 def prepare_native(target):
@@ -37,6 +49,7 @@ def prepare_native(target):
     notices = TOOLS / "licenses"
     notices.mkdir()
     windows = target.startswith("windows-")
+    shell = ffmpeg_shell(windows)
     suffix = ".exe" if windows else ""
     metadata = {}
 
@@ -72,7 +85,7 @@ def prepare_native(target):
         environment["CURB_FFMPEG_LDFLAGS"] = f"-L{brew}/lib -Wl,-headerpad_max_install_names"
         environment["PKG_CONFIG_PATH"] = ":".join(command("brew", "--prefix", package) + "/lib/pkgconfig" for package in ("gnutls", "lame")) + ":" + environment.get("PKG_CONFIG_PATH", "")
         environment["MACOSX_DEPLOYMENT_TARGET"] = "15.0"
-    subprocess.run(["bash", "packaging/native/build-ffmpeg.sh", source.as_posix(), prefix.as_posix()], cwd=ROOT, env=environment, check=True)
+    subprocess.run([shell, "packaging/native/build-ffmpeg.sh", source.as_posix(), prefix.as_posix()], cwd=ROOT, env=environment, check=True)
     for name in ("ffmpeg", "ffprobe"):
         shutil.copy2(prefix / "bin" / (name + suffix), TOOLS / (name + suffix))
     for name, output in (("FFmpeg-LICENSE", "ffmpeg-LICENSE"), ("config.log", "ffmpeg-config.log")):

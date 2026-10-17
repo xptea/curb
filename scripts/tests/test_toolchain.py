@@ -109,3 +109,22 @@ class ToolchainReuseTests(unittest.TestCase):
         self.assertFalse(toolchain_cache.trusted_run(dict(run, head_repository={"full_name": "other/curb"})))
         self.assertFalse(toolchain_cache.trusted_run(dict(run, path=".github/workflows/ci.yml")))
 
+
+class WindowsBuildShellTests(unittest.TestCase):
+    def test_windows_uses_explicit_msys2_bash_instead_of_wsl(self):
+        with tempfile.TemporaryDirectory(prefix="MSYS2 runtime ") as temporary:
+            shell = Path(temporary) / "usr/bin/bash.exe"
+            shell.parent.mkdir(parents=True)
+            shell.write_bytes(b"MSYS2 executable fixture")
+            with patch.object(native_tools, "command", return_value=str(shell)) as command, \
+                    patch.object(native_tools.shutil, "which", return_value="C:/Windows/System32/bash.exe"):
+                self.assertEqual(native_tools.ffmpeg_shell(True), str(shell))
+                command.assert_called_once_with("cygpath", "-w", "/usr/bin/bash.exe")
+
+    def test_missing_msys2_bash_does_not_fall_back_to_wsl(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            shell = Path(temporary) / "missing/bash.exe"
+            with patch.object(native_tools, "command", return_value=str(shell)):
+                with self.assertRaisesRegex(RuntimeError, "MSYS2 Bash is missing"):
+                    native_tools.ffmpeg_shell(True)
+
