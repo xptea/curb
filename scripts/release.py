@@ -37,7 +37,13 @@ def github_release(tag):
     result = subprocess.run(["gh", "api", f"repos/{REPOSITORY}/releases/tags/{tag}"], text=True, capture_output=True)
     if result.returncode:
         if "404" in result.stderr:
-            return None
+            # The by-tag endpoint omits drafts. The publisher must find an
+            # existing draft to upload assets, including one it just created.
+            listing = subprocess.run(["gh", "api", "--paginate", "--slurp",
+                                      f"repos/{REPOSITORY}/releases?per_page=100"], text=True, capture_output=True)
+            if listing.returncode:
+                raise RuntimeError(listing.stderr)
+            return next((item for page in json.loads(listing.stdout) for item in page if item["tag_name"] == tag), None)
         raise RuntimeError(result.stderr)
     return json.loads(result.stdout)
 
@@ -145,6 +151,8 @@ def publish(tag, assets):
         if release is None:
             run("gh", "release", "create", tag, "--repo", REPOSITORY, "--verify-tag", "--draft", "--title", f"Curb {version}", "--generate-notes")
             release = github_release(tag)
+            if release is None:
+                raise RuntimeError("Created draft release is not yet visible; retry publication without rebuilding")
         existing = {asset["name"]: asset for asset in release["assets"]}
         for path in files:
             digest = "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()

@@ -9,6 +9,20 @@ from bundler.native_runtime import collect_macos, collect_windows, macos_imports
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_draft_release_lookup_falls_back_to_paginated_release_list(self):
+        missing = Mock(returncode=1, stderr="gh: HTTP 404")
+        draft = {"id": 42, "tag_name": "v0.2.0", "draft": True, "assets": []}
+        listing = Mock(returncode=0, stdout=json.dumps([[{"tag_name": "v0.1.0"}], [draft]]))
+        with patch.object(release.subprocess, "run", side_effect=[missing, listing]) as run:
+            self.assertEqual(release.github_release("v0.2.0"), draft)
+            self.assertIn("--paginate", run.call_args_list[1].args[0])
+
+    def test_missing_tag_with_no_matching_draft_returns_none(self):
+        missing = Mock(returncode=1, stderr="gh: HTTP 404")
+        listing = Mock(returncode=0, stdout="[[]]")
+        with patch.object(release.subprocess, "run", side_effect=[missing, listing]):
+            self.assertIsNone(release.github_release("v0.2.0"))
+
     def test_smoke_plan_paths_match_go_windows_canonical_paths_under_msys2(self):
         path = Mock()
         path.resolve.return_value = "D:/a/curb/curb/build/mygo/.curb-update-check/plan.json"
