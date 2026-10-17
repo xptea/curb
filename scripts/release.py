@@ -73,7 +73,9 @@ def smoke_window(executable, target, version, platform):
         path = work / "plan.json"
         path.write_text(json.dumps(plan))
         environment = dict(os.environ, CURB_UPDATE_PLAN=str(path.resolve()), MYGO_GPU="0")
-        process = subprocess.Popen([str(executable.resolve())], cwd=target.parent, env=environment)
+        log = tempfile.TemporaryFile(mode="w+b")
+        process = subprocess.Popen([str(executable.resolve())], cwd=target.parent, env=environment,
+                                   stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
         try:
             deadline = time.monotonic() + 45
             while time.monotonic() < deadline:
@@ -81,7 +83,7 @@ def smoke_window(executable, target, version, platform):
                 if receipt.exists() and receipt.read_text() == token:
                     return
                 if process.poll() is not None:
-                    raise RuntimeError("Native app exited before drawing its first frame")
+                    raise RuntimeError(f"Native app exited before drawing its first frame (exit {process.returncode})")
                 time.sleep(0.1)
             raise RuntimeError("Native app did not acknowledge its first frame")
         finally:
@@ -91,6 +93,11 @@ def smoke_window(executable, target, version, platform):
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait()
+            log.seek(0)
+            diagnostics = log.read().decode("utf-8", errors="replace").strip()
+            if diagnostics:
+                print("Native startup log:\n" + diagnostics[-8000:], flush=True)
+            log.close()
 
 
 def build_native(platform):

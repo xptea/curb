@@ -27,6 +27,7 @@ func Run(version string, icon []byte) error {
 		app.Busy, app.SitesLoading, app.Choosing = false, false, false
 		app.win = mygo.NewWindow(mygo.WindowOptions{
 			Title: "Curb", Width: 900, Height: 640, MinWidth: 640, MinHeight: 540,
+			Hidden:        true,
 			TitleBarStyle: mygo.TitleBarHidden, TitleBarHeight: 46,
 			Frameless:   runtime.GOOS != "darwin",
 			Transparent: true, Content: ui.View(app.view),
@@ -69,6 +70,9 @@ func Run(version string, icon []byte) error {
 			})
 		}()
 		app.beginUpdateChecks()
+		// Register lifecycle callbacks before showing the native window.
+		// Windows can dispatch paint events synchronously while showing it.
+		win.Show()
 	}
 	mygo.App.WhenReady(func() {
 		if runtime.GOOS == "darwin" {

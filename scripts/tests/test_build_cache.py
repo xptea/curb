@@ -4,10 +4,33 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import bundle
 from bundler import lean_ffmpeg
 
 
 class BuildCacheTests(unittest.TestCase):
+    def test_restored_toolchain_can_package_without_an_existing_download_directory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            tools = root / "tools"
+            tools.mkdir()
+            for name in ("yt-dlp", "ffmpeg", "ffprobe", "qjs", "manifest.json"):
+                (tools / name).write_text("restored tool")
+            cache = root / "build/downloads"
+
+            def package(format):
+                self.assertTrue(cache.is_dir())
+                self.assertEqual(format, "appimage")
+
+            with patch.object(bundle, "CACHE", cache), patch.object(bundle, "TOOLS", tools), \
+                    patch.object(bundle.platform, "system", return_value="Linux"), \
+                    patch.object(bundle.platform, "machine", return_value="x86_64"), \
+                    patch("sys.argv", ["bundle.py", "--skip-download"]), \
+                    patch.object(bundle, "prepare_tools", side_effect=AssertionError("unnecessary tool rebuild")), \
+                    patch.object(bundle, "bundle", side_effect=package) as build:
+                bundle.main()
+                build.assert_called_once_with("appimage")
+
     def test_cache_refreshes_when_inputs_change_or_outputs_are_missing(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
