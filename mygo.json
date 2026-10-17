@@ -1,14 +1,19 @@
 {
   "name": "Curb",
   "identifier": "dev.curb.app",
-  "version": "0.1.0",
+  "version": "0.1.6",
   "icon": "resources/icon.png",
   "main": ".",
   "out": "build/mygo",
-  "resources": ["tools"],
+  "resources": [
+    "tools"
+  ],
   "linux": {
     "comment": "A link. A file. That's it.",
-    "categories": ["AudioVideo", "Utility"],
+    "categories": [
+      "AudioVideo",
+      "Utility"
+    ],
     "command": "curb"
   }
 }

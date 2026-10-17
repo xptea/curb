@@ -1,5 +1,30 @@
 {
   "schema": 1,
-  "version": "0.1.0",
-  "platforms": {}
+  "version": "0.1.6",
+  "platforms": {
+    "darwin-amd64": {
+      "name": "Curb-0.1.6-darwin-amd64.tar.gz",
+      "sha256": "bcf31165308508fd7713d24926682049971111dfa241adf077bda15c80cb22f0",
+      "size": 50797202,
+      "format": "tar.gz"
+    },
+    "darwin-arm64": {
+      "name": "Curb-0.1.6-darwin-arm64.tar.gz",
+      "sha256": "6c6c473b13fb6ae1cc100fe0553942d2f08574b67e0c10386a9c2cb984b078a4",
+      "size": 49558934,
+      "format": "tar.gz"
+    },
+    "windows-amd64": {
+      "name": "Curb-0.1.6-windows-amd64.zip",
+      "sha256": "699da512eff7599c72a363be7e0492fe141e78fadf301b8a84110190f3ee2fb1",
+      "size": 34789963,
+      "format": "zip"
+    },
+    "linux-amd64": {
+      "name": "Curb-0.1.6-x86_64.AppImage",
+      "sha256": "cb3bbd41471774b09211aa4298bca80e38777c97e9116856f9523c8353692edb",
+      "size": 51898872,
+      "format": "appimage"
+    }
+  }
 }
