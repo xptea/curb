@@ -1,29 +1,29 @@
 {
   "schema": 1,
-  "version": "0.1.6",
+  "version": "0.1.7",
   "platforms": {
     "darwin-amd64": {
-      "name": "Curb-0.1.6-darwin-amd64.tar.gz",
-      "sha256": "bcf31165308508fd7713d24926682049971111dfa241adf077bda15c80cb22f0",
-      "size": 50797202,
+      "name": "Curb-0.1.7-darwin-amd64.tar.gz",
+      "sha256": "d56a80921ba0816efe991b487c36a95e4bfe8cf6cb66465204130e77713de02c",
+      "size": 50805148,
       "format": "tar.gz"
     },
     "darwin-arm64": {
-      "name": "Curb-0.1.6-darwin-arm64.tar.gz",
-      "sha256": "6c6c473b13fb6ae1cc100fe0553942d2f08574b67e0c10386a9c2cb984b078a4",
-      "size": 49558934,
+      "name": "Curb-0.1.7-darwin-arm64.tar.gz",
+      "sha256": "d982dd2e26e189105b54d7322faa1cba7a875db743c4a6de06594ae6bf771e12",
+      "size": 49565896,
       "format": "tar.gz"
     },
     "windows-amd64": {
-      "name": "Curb-0.1.6-windows-amd64.zip",
-      "sha256": "699da512eff7599c72a363be7e0492fe141e78fadf301b8a84110190f3ee2fb1",
-      "size": 34789963,
+      "name": "Curb-0.1.7-windows-amd64.zip",
+      "sha256": "b900291fb935c1308a1b8969575a62b14c421cd4dc60f2e1dd509ab96fc9f19c",
+      "size": 34799475,
       "format": "zip"
     },
     "linux-amd64": {
-      "name": "Curb-0.1.6-x86_64.AppImage",
-      "sha256": "cb3bbd41471774b09211aa4298bca80e38777c97e9116856f9523c8353692edb",
-      "size": 51898872,
+      "name": "Curb-0.1.7-x86_64.AppImage",
+      "sha256": "914e67e4715e8b446b35be593920adbd73618ede9f1bcc25fbd2eb712b8dbdb7",
+      "size": 51902968,
       "format": "appimage"
     }
   }

@@ -1,7 +1,7 @@
 {
   "name": "Curb",
   "identifier": "dev.curb.app",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "icon": "resources/icon.png",
   "main": ".",
   "out": "build/mygo",
