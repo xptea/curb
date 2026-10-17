@@ -102,6 +102,21 @@ jobs:
       - name: Set the build version from the release tag
         if: runner.os != 'Windows'
         run: python3 scripts/release.py prepare --tag "$RELEASE_TAG"
+      - name: Check Linux before preparing media tools
+        if: runner.os == 'Linux'
+        run: make check
+      - name: Check macOS before preparing media tools
+        if: runner.os == 'macOS'
+        run: |
+          go test -buildvcs=false -race ./...
+          PYTHONPATH=scripts python3 -m unittest discover -s scripts/tests
+      - name: Check Windows before preparing media tools
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          python scripts/release.py prepare --tag "$RELEASE_TAG"
+          go test -buildvcs=false -race ./...
+          PYTHONPATH=scripts python -m unittest discover -s scripts/tests
       - name: Prepare Linux media tools on a cache miss
         if: runner.os == 'Linux' && steps.toolchain.outputs.hit != 'true'
         run: make tools
@@ -125,28 +140,20 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
-      - name: Check and build the Linux AppImage
+      - name: Build and test the Linux AppImage
         if: runner.os == 'Linux'
         run: |
-          make check
           make bundle-local
           make test-integration
-      - name: Check and build the macOS app bundle
+      - name: Build and test the macOS app bundle
         if: runner.os == 'macOS'
         env:
           CURB_PLATFORM: ${{ matrix.platform }}
-        run: |
-          go test -buildvcs=false -race ./...
-          PYTHONPATH=scripts python3 -m unittest discover -s scripts/tests
-          python3 scripts/release.py build-native --platform "$CURB_PLATFORM"
-      - name: Check and build the Windows portable app
+        run: python3 scripts/release.py build-native --platform "$CURB_PLATFORM"
+      - name: Build and test the Windows portable app
         if: runner.os == 'Windows'
         shell: msys2 {0}
-        run: |
-          python scripts/release.py prepare --tag "$RELEASE_TAG"
-          go test -buildvcs=false -race ./...
-          PYTHONPATH=scripts python -m unittest discover -s scripts/tests
-          python scripts/release.py build-native --platform windows-amd64
+        run: python scripts/release.py build-native --platform windows-amd64
       - uses: actions/upload-artifact@v7
         with:
           name: curb-release-${{ matrix.platform }}

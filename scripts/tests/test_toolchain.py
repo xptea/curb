@@ -1,6 +1,7 @@
 """Packaging regressions seen on clean release runners."""
 import hashlib
 import io
+import os
 import tarfile
 import tempfile
 import unittest
@@ -67,7 +68,9 @@ class ToolchainReuseTests(unittest.TestCase):
                     patch.dict("os.environ", {"GITHUB_OUTPUT": str(root / "outputs"), "GITHUB_REF_NAME": "v0.1.2"}):
                 toolchain_cache.restore("linux-amd64")
             self.assertEqual((root / "tools/ffmpeg").read_bytes(), content)
-            self.assertTrue((root / "tools/ffmpeg").stat().st_mode & 0o111)
+            # Windows uses PE executables, not Unix execute permission bits.
+            if os.name != "nt":
+                self.assertTrue((root / "tools/ffmpeg").stat().st_mode & 0o111)
             self.assertIn("hit=true", (root / "outputs").read_text())
 
     def test_cache_recipe_key_changes_with_build_configuration(self):
