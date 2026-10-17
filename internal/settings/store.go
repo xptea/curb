@@ -10,6 +10,8 @@ import (
 type Preferences struct {
 	Destination       string `json:"destination"`
 	AutoCopyDownloads bool   `json:"auto_copy_downloads"`
+	VideoOutputFormat string `json:"video_output_format"`
+	AudioOutputFormat string `json:"audio_output_format"`
 }
 
 // Path returns the per-user settings location without creating it.

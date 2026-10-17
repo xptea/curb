@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"time"
 
 	"curb/internal/download"
 )
@@ -25,10 +26,10 @@ func (a *application) startDownload() {
 		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	a.cancel, a.Busy, a.Failure, a.SavedPath = cancel, true, "", ""
-	a.CopiedToClipboard, a.ClipboardError = false, ""
+	a.ClearSavedFeedback()
+	a.cancel, a.Busy, a.Failure = cancel, true, ""
 	a.Status, a.Detail, a.Progress = "Connecting to your link…", "", -1
-	request := download.Request{URL: link, Destination: a.Destination, Format: a.Format, Quality: a.Quality, AudioQuality: a.AudioQuality}
+	request := download.Request{URL: link, Destination: a.Destination, Format: a.Format, Quality: a.Quality, AudioQuality: a.AudioQuality, VideoOutputFormat: a.VideoOutputFormat, AudioOutputFormat: a.AudioOutputFormat}
 	win := a.win
 	go func() {
 		path, err := download.Run(ctx, a.tools, request, func(u download.Update) {
@@ -49,7 +50,7 @@ func (a *application) startDownload() {
 // exists. Offer a native file reference, never the URL, path text, or file bytes.
 func (a *application) finishDownload(path string, err error) {
 	a.Busy, a.cancel = false, nil
-	a.CopiedToClipboard, a.ClipboardError = false, ""
+	a.ClearSavedFeedback()
 	if errors.Is(err, context.Canceled) {
 		a.Status = "Download canceled"
 		return
@@ -59,6 +60,7 @@ func (a *application) finishDownload(path string, err error) {
 		return
 	}
 	a.SavedPath, a.Status, a.Progress = path, "Saved", 1
+	a.SavedUntil = time.Now().Add(10 * time.Second)
 	if a.AutoCopyDownloads {
 		if err := a.copyFile(path); err != nil {
 			a.ClipboardError = err.Error()

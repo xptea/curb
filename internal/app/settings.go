@@ -6,6 +6,7 @@ import (
 
 	"github.com/egoist/mygo"
 
+	"curb/internal/media"
 	"curb/internal/settings"
 )
 
@@ -20,6 +21,8 @@ func (a *application) loadSettings() {
 		return
 	}
 	a.AutoCopyDownloads = preferences.AutoCopyDownloads
+	a.VideoOutputFormat = media.VideoOutput(preferences.VideoOutputFormat)
+	a.AudioOutputFormat = media.AudioOutput(preferences.AudioOutputFormat)
 	if filepath.IsAbs(preferences.Destination) {
 		a.Destination = preferences.Destination
 	}
@@ -35,12 +38,15 @@ func (a *application) saveSettings() {
 		a.SettingsError = "Your settings folder is unavailable."
 		return
 	}
-	if err := settings.Save(a.settingsPath, settings.Preferences{Destination: destination, AutoCopyDownloads: a.SettingsAutoCopyDownloads}); err != nil {
+	videoOutput := media.VideoOutput(a.SettingsVideoOutputFormat)
+	audioOutput := media.AudioOutput(a.SettingsAudioOutputFormat)
+	if err := settings.Save(a.settingsPath, settings.Preferences{Destination: destination, AutoCopyDownloads: a.SettingsAutoCopyDownloads, VideoOutputFormat: videoOutput, AudioOutputFormat: audioOutput}); err != nil {
 		a.SettingsError = err.Error()
 		return
 	}
 	a.Destination = destination
 	a.AutoCopyDownloads = a.SettingsAutoCopyDownloads
+	a.VideoOutputFormat, a.AudioOutputFormat = videoOutput, audioOutput
 	a.SettingsOpen = false
 }
 

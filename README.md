@@ -42,6 +42,8 @@ Downloads initially go to the operating system's Downloads folder. Change this i
 
 Enable **Automatically copy downloaded files** in Settings to put the finished video or audio file on the system clipboard, ready to paste. This is off by default and remembered between launches. A clipboard error does not affect the saved download.
 
+Settings also has separate **Default video format** (Original, MP4, MKV) and **Default audio format** (Original, MP3, M4A, WAV, FLAC) choices. MP4 and MP3 are the defaults. Original preserves the source video or audio encoding; other choices convert or repackage as needed. MP4 conversion uses H.264 video and AAC audio when re-encoding is necessary. Conversions use a private temporary folder and preserve earlier downloads by choosing a numbered filename if the final name already exists.
+
 ## Build and check
 
 ```sh

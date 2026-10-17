@@ -14,6 +14,13 @@ func Render(c *ui.Context, state *State, actions Actions) {
 }
 
 func (a *screen) render(c *ui.Context) {
+	if a.SavedPath != "" && !a.SavedUntil.IsZero() {
+		if remaining := a.SavedUntil.Sub(c.Now()); remaining > 0 {
+			c.After(remaining)
+		} else {
+			a.ClearSavedFeedback()
+		}
+	}
 	c.SetTheme(style.Theme(a.LightMode))
 	c.Root().Background(ui.Transparent)
 	radius := float32(style.Radius)

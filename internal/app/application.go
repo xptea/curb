@@ -9,6 +9,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"curb/internal/download"
+	"curb/internal/media"
 	view "curb/internal/ui"
 	"curb/internal/update"
 )
@@ -43,6 +44,8 @@ func newApplication(version string) *application {
 	}
 	a := &application{State: view.State{Version: version, Destination: destination, Format: "Video", Quality: "Best available", AudioQuality: "Best quality", Status: "Ready when you are", Progress: -1}}
 	a.loadSettings()
+	a.VideoOutputFormat = media.VideoOutput(a.VideoOutputFormat)
+	a.AudioOutputFormat = media.AudioOutput(a.AudioOutputFormat)
 	a.copyFile = func(path string) error { return mygo.Clipboard.WriteFiles(path) }
 	a.updateClient = update.NewClient(version)
 	a.UpdateError = os.Getenv("CURB_UPDATE_ERROR")

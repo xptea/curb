@@ -3,6 +3,7 @@ package view
 import (
 	"github.com/egoist/mygo/ui"
 
+	"curb/internal/media"
 	"curb/internal/ui/components"
 	"curb/internal/ui/style"
 )
@@ -14,7 +15,10 @@ func (a *screen) downloadForm(c *ui.Context) {
 		Border(1, c.Theme().Border).Background(c.Theme().Surface).Children(func() {
 		ui.TextInputBase(c.Key("media-url"), &a.URL).Grow(1).Height(40).Padding(11, 0).
 			FontSize(14).Placeholder("Paste a video or audio link…").Label("Media URL").Disabled(a.Busy).
-			OnChange(func() { a.Failure = "" }).OnSubmit(a.actions.Download)
+			OnChange(func() {
+				a.Failure = ""
+				a.ClearSavedFeedback()
+			}).OnSubmit(a.actions.Download)
 		if a.Busy {
 			if ui.Button(c, "Cancel").Height(34).Padding(6, 10).FontSize(12).
 				Border(0, ui.Transparent).Background(ui.Transparent).Clicked() {
@@ -44,8 +48,16 @@ func (a *screen) downloadForm(c *ui.Context) {
 		components.MediaTypeToggle(c, &a.Format, a.Busy)
 		ui.Spacer(c)
 		if a.Format == "Audio" {
-			components.QualitySelect(c, &a.AudioQuality, []string{"Best quality", "320 kbps", "256 kbps", "192 kbps", "128 kbps"},
-				"Audio quality", "MP3 audio quality", a.Busy)
+			if media.AudioHasBitrate(a.AudioOutputFormat) {
+				components.QualitySelect(c, &a.AudioQuality, []string{"Best quality", "320 kbps", "256 kbps", "192 kbps", "128 kbps"},
+					"Audio quality", media.AudioOutput(a.AudioOutputFormat)+" audio quality", a.Busy)
+			} else {
+				label := "Lossless"
+				if media.AudioOutput(a.AudioOutputFormat) == media.Original {
+					label = "Source quality"
+				}
+				ui.Text(c, label).FontSize(12).TextColor(c.Theme().TextMuted).Margin(8, 0)
+			}
 		} else {
 			components.QualitySelect(c, &a.Quality, []string{"Best available", "2160p", "1440p", "1080p", "720p", "480p", "360p"},
 				"Video quality", "Highest available quality at or below this resolution", a.Busy)

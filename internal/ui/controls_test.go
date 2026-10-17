@@ -87,3 +87,39 @@ func TestAutoCopySettingsAreDraftUntilSaved(t *testing.T) {
 		t.Fatal("cancel did not discard the draft clipboard preference")
 	}
 }
+
+func TestOutputFormatSettingsCancelAndReopen(t *testing.T) {
+	state, render := newTestView()
+	state.VideoOutputFormat, state.AudioOutputFormat = "MP4", "MP3"
+	tt := ui.NewTester(render, 900, 640)
+	for _, label := range []string{"Settings", "Video output format", "Original", "Audio output format", "FLAC"} {
+		if err := tt.Click(label); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if state.SettingsVideoOutputFormat != "Original" || state.SettingsAudioOutputFormat != "FLAC" {
+		t.Fatal("output selectors did not update draft settings")
+	}
+	if state.VideoOutputFormat != "MP4" || state.AudioOutputFormat != "MP3" {
+		t.Fatal("draft output formats were applied before saving")
+	}
+	for _, label := range []string{"Cancel", "Settings"} {
+		if err := tt.Click(label); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if state.SettingsVideoOutputFormat != "MP4" || state.SettingsAudioOutputFormat != "MP3" {
+		t.Fatal("cancel did not discard output format edits")
+	}
+}
+
+func TestSourceAndLosslessAudioDoNotOfferBitrate(t *testing.T) {
+	for _, format := range []string{"Original", "WAV", "FLAC"} {
+		state, render := newTestView()
+		state.Format, state.AudioOutputFormat = "Audio", format
+		tt := ui.NewTester(render, 900, 640)
+		if _, found := tt.Find("Audio quality"); found {
+			t.Fatalf("%s should not offer a lossy bitrate selector", format)
+		}
+	}
+}

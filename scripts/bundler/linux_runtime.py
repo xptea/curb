@@ -46,7 +46,7 @@ def collect(destination):
     notices.mkdir()
     packages = set()
     roots = [next(Path("/usr/lib").glob(f"*-linux-gnu/{name}"))
-             for name in ("libgtk-3.so.0", "libepoxy.so.0", "libmp3lame.so.0", "libgnutls.so.30")]
+             for name in ("libgtk-3.so.0", "libepoxy.so.0", "libmp3lame.so.0", "libgnutls.so.30", "libx264.so.*")]
     module_sets = {
         "gio": list(Path("/usr/lib").glob("*-linux-gnu/gio/modules/*.so")),
         "immodules": list(Path("/usr/lib").glob("*-linux-gnu/gtk-3.0/*/immodules/*.so")),

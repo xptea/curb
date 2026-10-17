@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 )
@@ -16,6 +17,16 @@ func Run(ctx context.Context, tools Tools, request Request, notify func(Update))
 	if err := os.MkdirAll(request.Destination, 0755); err != nil {
 		return "", fmt.Errorf("Cannot create the download folder: %w", err)
 	}
+	destination, err := filepath.Abs(request.Destination)
+	if err != nil {
+		return "", err
+	}
+	workspace, err := os.MkdirTemp(destination, ".curb-download-*")
+	if err != nil {
+		return "", fmt.Errorf("Cannot prepare the download folder: %w", err)
+	}
+	defer os.RemoveAll(workspace)
+	request.Destination = workspace
 	cmd := exec.CommandContext(ctx, tools.Downloader, downloadArgs(tools, request)...)
 	configureProcess(cmd)
 	stdout, err := cmd.StdoutPipe()
@@ -43,8 +54,9 @@ func Run(ctx context.Context, tools Tools, request Request, notify func(Update))
 			if u, ok := parseUpdate(line); ok {
 				if u.Path != "" {
 					savedPath = u.Path
+				} else {
+					notify(u)
 				}
-				notify(u)
 			}
 			if strings.HasPrefix(line, "ERROR:") {
 				errorLine = strings.TrimPrefix(line, "ERROR: ")
@@ -80,5 +92,13 @@ func Run(ctx context.Context, tools Tools, request Request, notify func(Update))
 	if info, err := os.Stat(savedPath); err != nil || !info.Mode().IsRegular() {
 		return "", errors.New("The downloaded file could not be found.")
 	}
-	return savedPath, nil
+	if relative, err := filepath.Rel(workspace, savedPath); err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", errors.New("The download engine returned a file outside its workspace.")
+	}
+	path, err := publishOutput(ctx, savedPath, destination)
+	if err != nil {
+		return "", fmt.Errorf("Could not save the finished file: %w", err)
+	}
+	notify(Update{Path: path, Status: "Saved", Progress: 1})
+	return path, nil
 }

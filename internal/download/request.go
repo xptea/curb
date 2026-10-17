@@ -1,6 +1,7 @@
 package download
 
 import (
+	"curb/internal/media"
 	"errors"
 	"fmt"
 	"net/url"
@@ -9,7 +10,7 @@ import (
 	"strings"
 )
 
-type Request struct{ URL, Destination, Format, Quality, AudioQuality string }
+type Request struct{ URL, Destination, Format, Quality, AudioQuality, VideoOutputFormat, AudioOutputFormat string }
 
 func ValidateURL(raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
@@ -36,13 +37,28 @@ func downloadArgs(t Tools, r Request) []string {
 		case "320 kbps", "256 kbps", "192 kbps", "128 kbps":
 			quality = strings.TrimSuffix(r.AudioQuality, " kbps") + "K"
 		}
-		args = append(args, "--extract-audio", "--audio-format", "mp3", "--audio-quality", quality)
+		output := media.AudioOutput(r.AudioOutputFormat)
+		format := strings.ToLower(output)
+		if output == media.Original {
+			format = "best"
+		}
+		args = append(args, "--format", "bestaudio/best", "--extract-audio", "--audio-format", format)
+		if media.AudioHasBitrate(output) {
+			args = append(args, "--audio-quality", quality)
+		}
 	} else {
 		selector := "bv*+ba/b"
 		if height, err := strconv.Atoi(strings.TrimSuffix(r.Quality, "p")); err == nil {
 			selector = fmt.Sprintf("bv*[height<=%d]+ba/b[height<=%d]", height, height)
 		}
-		args = append(args, "--format", selector, "--merge-output-format", "mkv")
+		args = append(args, "--format", selector)
+		switch media.VideoOutput(r.VideoOutputFormat) {
+		case "MP4":
+			args = append(args, "--recode-video", "mp4", "--postprocessor-args",
+				"VideoConvertor+ffmpeg_o:-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -vf scale=ceil(iw/2)*2:ceil(ih/2)*2 -c:a aac -movflags +faststart")
+		case "MKV":
+			args = append(args, "--merge-output-format", "mkv", "--remux-video", "mkv")
+		}
 	}
 	return append(args, "--", r.URL)
 }

@@ -41,3 +41,44 @@ func TestDownloadArguments(t *testing.T) {
 		t.Fatal("selected audio quality not applied")
 	}
 }
+
+func TestOutputFormatArguments(t *testing.T) {
+	tools := Tools{FFmpeg: "/tools/ffmpeg"}
+	request := Request{URL: "https://example.com/media", Destination: "/downloads", Format: "Video"}
+	for _, output := range []string{"Original", "MP4", "MKV"} {
+		request.VideoOutputFormat = output
+		args := strings.Join(downloadArgs(tools, request), "\n")
+		switch output {
+		case "Original":
+			if strings.Contains(args, "--recode-video") || strings.Contains(args, "--remux-video") || strings.Contains(args, "--merge-output-format") {
+				t.Fatal("original video must not force a container or conversion")
+			}
+		case "MP4":
+			for _, want := range []string{"--recode-video\nmp4", "VideoConvertor+ffmpeg_o:", "-c:v libx264", "-c:a aac", "-pix_fmt yuv420p"} {
+				if !strings.Contains(args, want) {
+					t.Fatalf("MP4 conversion missing %q", want)
+				}
+			}
+		case "MKV":
+			if !strings.Contains(args, "--remux-video\nmkv") || strings.Contains(args, "--recode-video") {
+				t.Fatal("MKV should repackage without re-encoding")
+			}
+		}
+	}
+	request.Format = "Audio"
+	request.AudioQuality = "192 kbps"
+	for _, output := range []string{"Original", "MP3", "M4A", "WAV", "FLAC"} {
+		request.AudioOutputFormat = output
+		args := strings.Join(downloadArgs(tools, request), "\n")
+		format := strings.ToLower(output)
+		if output == "Original" {
+			format = "best"
+		}
+		if !strings.Contains(args, "--audio-format\n"+format) || !strings.Contains(args, "--format\nbestaudio/best") {
+			t.Fatalf("wrong extraction for %s: %s", output, args)
+		}
+		if strings.Contains(args, "--audio-quality") != (output == "MP3" || output == "M4A") {
+			t.Fatalf("bitrate applied incorrectly to %s", output)
+		}
+	}
+}

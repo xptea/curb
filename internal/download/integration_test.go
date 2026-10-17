@@ -164,3 +164,93 @@ func TestCancelRealDownload(t *testing.T) {
 		t.Fatalf("cancel did not stop promptly: %v", err)
 	}
 }
+
+func TestRealOutputFormatChoices(t *testing.T) {
+	tools := integrationTools(t)
+	dir := t.TempDir()
+	fixture, err := os.ReadFile("testdata/sample.mp4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample.mp4"), fixture, 0600); err != nil {
+		t.Fatal(err)
+	}
+	webm, err := os.ReadFile("testdata/sample.webm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample.webm"), webm, 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{
+		{"-i", "testdata/sample.mp4", "-c", "copy", filepath.Join(dir, "source.mkv")},
+		{"-i", "testdata/sample.mp4", "-vn", "-c:a", "libmp3lame", filepath.Join(dir, "source.mp3")},
+	} {
+		if output, err := exec.Command(tools.FFmpeg, append([]string{"-v", "error"}, args...)...).CombinedOutput(); err != nil {
+			t.Fatalf("prepare source: %v %s", err, output)
+		}
+	}
+	server := httptest.NewServer(http.FileServer(http.Dir(dir)))
+	defer server.Close()
+	for _, tc := range []struct{ mode, output, source, extension, codec string }{
+		{"Video", "Original", "source.mkv", ".mkv", "h264"},
+		{"Video", "MP4", "source.mkv", ".mp4", "h264"},
+		{"Video", "MP4", "sample.webm", ".mp4", "h264"},
+		{"Video", "Original", "sample.webm", ".webm", "vp9"},
+		{"Video", "MKV", "sample.mp4", ".mkv", "h264"},
+		{"Audio", "Original", "source.mp3", ".mp3", "mp3"},
+		{"Audio", "Original", "sample.webm", ".opus", "opus"},
+		{"Audio", "MP3", "source.mkv", ".mp3", "mp3"},
+		{"Audio", "M4A", "source.mp3", ".m4a", "aac"},
+		{"Audio", "WAV", "source.mkv", ".wav", "pcm_s16le"},
+		{"Audio", "FLAC", "source.mkv", ".flac", "flac"},
+	} {
+		t.Run(tc.mode+"/"+tc.output, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			path, err := Run(ctx, tools, Request{URL: server.URL + "/" + tc.source, Destination: t.TempDir(), Format: tc.mode, VideoOutputFormat: tc.output, AudioOutputFormat: tc.output}, func(Update) {})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if filepath.Ext(path) != tc.extension {
+				t.Fatalf("expected %s, got %s", tc.extension, path)
+			}
+			probe := filepath.Join(filepath.Dir(tools.FFmpeg), "ffprobe"+filepath.Ext(tools.FFmpeg))
+			output, err := exec.Command(probe, "-v", "error", "-show_entries", "stream=codec_name", "-of", "csv=p=0", path).CombinedOutput()
+			if err != nil || !strings.Contains(string(output), tc.codec) {
+				t.Fatalf("wrong final codec: %v %s", err, output)
+			}
+			if tc.mode == "Audio" && strings.Contains(string(output), "h264") {
+				t.Fatal("audio download still contains video")
+			}
+			if tc.mode == "Video" && tc.output == "MP4" && !strings.Contains(string(output), "aac") {
+				t.Fatal("converted MP4 is missing AAC audio")
+			}
+			if tc.output == "Original" && (tc.mode == "Video" || tc.source == "source.mp3") {
+				want, _ := os.ReadFile(filepath.Join(dir, tc.source))
+				got, _ := os.ReadFile(path)
+				if string(want) != string(got) {
+					t.Fatal("original media was re-encoded or repackaged")
+				}
+			}
+		})
+	}
+	t.Run("Preserve existing video when extracting audio", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		destination := t.TempDir()
+		request := Request{URL: server.URL + "/sample.mp4", Destination: destination, Format: "Video", VideoOutputFormat: "Original"}
+		path, err := Run(ctx, tools, request, func(Update) {})
+		if err != nil {
+			t.Fatal(err)
+		}
+		request.Format, request.AudioOutputFormat = "Audio", "MP3"
+		if _, err := Run(ctx, tools, request, func(Update) {}); err != nil {
+			t.Fatal(err)
+		}
+		preserved, err := os.ReadFile(path)
+		if err != nil || string(preserved) != string(fixture) {
+			t.Fatalf("audio conversion changed or removed an existing video: %v", err)
+		}
+	})
+}

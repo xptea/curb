@@ -5,6 +5,7 @@ import (
 	"errors"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestCompletedDownloadsCopyFinalFile(t *testing.T) {
@@ -16,7 +17,11 @@ func TestCompletedDownloadsCopyFinalFile(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "My media"+extension)
 			var copied []string
 			a.copyFile = func(path string) error { copied = append(copied, path); return nil }
+			before := time.Now()
 			a.finishDownload(path, nil)
+			if a.SavedUntil.Before(before.Add(10*time.Second)) || a.SavedUntil.After(time.Now().Add(10*time.Second)) {
+				t.Fatal("saved confirmation was not scheduled for ten seconds")
+			}
 			if len(copied) != 1 || copied[0] != path || !a.CopiedToClipboard || a.SavedPath != path || a.Busy || a.Progress != 1 {
 				t.Fatalf("final file was not copied after success: paths=%v state=%+v", copied, a.State)
 			}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/egoist/mygo/ui"
 
+	"curb/internal/media"
 	"curb/internal/ui/components"
 	"curb/internal/ui/style"
 )
@@ -36,6 +37,8 @@ func (a *screen) titleBar(c *ui.Context) {
 				if a.SettingsOpen {
 					a.SettingsDestination, a.SettingsError = a.Destination, ""
 					a.SettingsAutoCopyDownloads = a.AutoCopyDownloads
+					a.SettingsVideoOutputFormat = media.VideoOutput(a.VideoOutputFormat)
+					a.SettingsAudioOutputFormat = media.AudioOutput(a.AudioOutputFormat)
 				}
 			})
 			components.IconButton(c, label, symbol).OnClick(a.toggleTheme)

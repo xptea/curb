@@ -83,7 +83,7 @@ def prepare_native(target):
         brew = command("brew", "--prefix")
         environment["CURB_FFMPEG_CFLAGS"] = f"-Os -I{brew}/include"
         environment["CURB_FFMPEG_LDFLAGS"] = f"-L{brew}/lib -Wl,-headerpad_max_install_names"
-        environment["PKG_CONFIG_PATH"] = ":".join(command("brew", "--prefix", package) + "/lib/pkgconfig" for package in ("gnutls", "lame")) + ":" + environment.get("PKG_CONFIG_PATH", "")
+        environment["PKG_CONFIG_PATH"] = ":".join(command("brew", "--prefix", package) + "/lib/pkgconfig" for package in ("gnutls", "lame", "x264")) + ":" + environment.get("PKG_CONFIG_PATH", "")
         environment["MACOSX_DEPLOYMENT_TARGET"] = "15.0"
     subprocess.run([shell, "packaging/native/build-ffmpeg.sh", source.as_posix(), prefix.as_posix()], cwd=ROOT, env=environment, check=True)
     for name in ("ffmpeg", "ffprobe"):

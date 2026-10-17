@@ -29,7 +29,7 @@ MyGo's shader compiler includes code copyright 2020–2026 The Ebiten Authors an
 Portable Linux distributions include yt-dlp, FFmpeg/ffprobe, and QuickJS-NG as separate executables invoked by Curb. Their notices and source information are generated under `tools/licenses/`, and their resolved releases/checksums are recorded in `tools/manifest.json`.
 
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp): retain its license and standalone binary's third-party notices.
-- [FFmpeg](https://ffmpeg.org/): built from checksum-pinned official source with a small shared-library configuration. Preserve its LGPL notice, configuration log, and the source/build materials required for the exact distributed build.
+- [FFmpeg](https://ffmpeg.org/): built from checksum-pinned official source with a small shared-library configuration and GPL-licensed x264 for H.264 output. This FFmpeg build uses GPL-2.0-or-later; preserve its GPL notice, x264's notices, configuration log, and corresponding source/build materials for the exact distributed build. Curb invokes FFmpeg as a separate executable; Curb's own code remains MIT.
 - [QuickJS-NG](https://github.com/quickjs-ng/quickjs): retain its MIT license and notices.
 
 The AppImage includes GTK and dependency libraries from an Ubuntu 22.04 build container, a DejaVu fallback font, and the official AppImage type-2 runtime. Their copyright notices, license texts, and version manifests are included under `usr/share/doc/curb/` inside the AppImage. GPU drivers and glibc remain supplied by the host. See [packaging](docs/packaging.md) for redistribution and source/build requirements.

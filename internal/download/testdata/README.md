@@ -8,4 +8,10 @@ ffmpeg -v error -f lavfi -i color=c=green:s=160x90:r=15 \
   -c:v libx264 -c:a aac -shortest sample.mp4
 ```
 
-Generating the fixture requires a full development FFmpeg. Running the tests uses this checked-in fixture and Curb's small bundled tools; the production app does not need video encoders or synthetic media generators.
+`sample.webm` contains the same generated scene encoded as VP9/Opus, to test conversion into a compatible MP4 and preservation of original WebM/Opus media:
+
+```sh
+ffmpeg -v error -i sample.mp4 -c:v libvpx-vp9 -b:v 80k -c:a libopus -b:a 48k sample.webm
+```
+
+Generating these fixtures requires a full development FFmpeg. Running the tests uses the checked-in fixtures and Curb's bundled conversion tools. Production includes the selected output encoders, but does not need synthetic media generators or VP9/Opus encoders.
